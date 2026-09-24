@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output (Vite + Nitro)
+dist/
+.output/
+.vercel/
+
+# Environment — never commit secrets or local env
+.env
+.env.*
+!.env.example
+.grok/app-env.json
+.grok/preview.log
+.grok/status
+
+# QA artifacts
+screenshots/
+*.png
+!public/**/*.png
+
+# Logs & tooling
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local database (PGLite fallback)
+*.pglite/

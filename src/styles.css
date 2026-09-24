@@ -1,0 +1,515 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #07110c;
+  --color-forest: #0e1c16;
+  --color-moss: #163024;
+  --color-cream: #f3ead6;
+  --color-cream-muted: #cbbfa3;
+  --color-gold: #c9a45c;
+  --color-gold-bright: #e4c98a;
+  --color-border: color-mix(in oklab, #c9a45c 28%, transparent);
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-quick: 150ms;
+  --motion-fast: 250ms;
+  --motion-slow: 400ms;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    /* Sticky header is ~4rem tall — keep anchor targets clear of it. */
+    scroll-padding-top: 5.5rem;
+  }
+
+  body {
+    background: var(--color-ink);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee 32s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .marquee-track {
+    animation: none;
+  }
+  .aurora,
+  .blob,
+  .blob-slow,
+  .blob-slower {
+    animation: none !important;
+  }
+  .btn-gold-glass::after,
+  .card-shine::before {
+    transition: none;
+    transform: none;
+  }
+  .typing-dot {
+    animation: none;
+    opacity: 0.6;
+  }
+  .chat-pop {
+    animation: none !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .splash,
+  .splash * {
+    animation: none !important;
+  }
+  .splash {
+    transition: none !important;
+  }
+  .stagger-in {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.stagger-in {
+  opacity: 0;
+  animation: fade-up var(--motion-slow) var(--ease-out) forwards;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Liquid glass — frosted translucent surfaces with inner top-edge
+   light and saturated backdrop blur. Sections add ambient colour
+   glows behind these panels so the blur reads as depth, not grey.
+   ──────────────────────────────────────────────────────────────── */
+
+.glass {
+  position: relative;
+  background: linear-gradient(
+    145deg,
+    rgba(243, 234, 214, 0.10),
+    rgba(243, 234, 214, 0.035) 40%,
+    rgba(22, 48, 36, 0.32)
+  );
+  border: 1px solid rgba(243, 234, 214, 0.14);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(7, 17, 12, 0.28),
+    0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.glass-hover {
+  transition:
+    transform var(--motion-slow) var(--ease-out),
+    box-shadow var(--motion-slow) var(--ease-out),
+    background var(--motion-slow) var(--ease-out);
+}
+
+.glass-hover:hover {
+  transform: translateY(-4px);
+  background: linear-gradient(
+    145deg,
+    rgba(243, 234, 214, 0.14),
+    rgba(243, 234, 214, 0.05) 45%,
+    rgba(22, 48, 36, 0.38)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(7, 17, 12, 0.28),
+    0 20px 50px rgba(0, 0, 0, 0.38),
+    0 0 34px rgba(201, 164, 92, 0.10);
+}
+
+/* Slim field / chip surface — subtle frost, no drop shadow. */
+.glass-field {
+  background: linear-gradient(180deg, rgba(243, 234, 214, 0.09), rgba(243, 234, 214, 0.04));
+  border: 1px solid rgba(243, 234, 214, 0.16);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Sticky header — strong frost, warm bottom edge, soft float. */
+.glass-header {
+  background: linear-gradient(180deg, rgba(7, 17, 12, 0.72), rgba(14, 28, 22, 0.55));
+  border-bottom: 1px solid rgba(243, 234, 214, 0.10);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow:
+    inset 0 -1px 0 rgba(201, 164, 92, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* Full-height side sheet — keeps a lit edge on the right. */
+.glass-sheet {
+  background: linear-gradient(180deg, rgba(14, 28, 22, 0.82), rgba(7, 17, 12, 0.9));
+  border-left: 1px solid rgba(243, 234, 214, 0.12);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.06),
+    -12px 0 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Centered modal. */
+.glass-modal {
+  background: linear-gradient(165deg, rgba(22, 48, 36, 0.85), rgba(7, 17, 12, 0.92));
+  border: 1px solid rgba(243, 234, 214, 0.14);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+.glass-overlay {
+  background: linear-gradient(180deg, rgba(7, 17, 12, 0.55), rgba(7, 17, 12, 0.78));
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+}
+
+/* Frosted chip floating over imagery (photo tags, holds). */
+.glass-chip {
+  background: linear-gradient(180deg, rgba(7, 17, 12, 0.55), rgba(7, 17, 12, 0.4));
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-field,
+  .glass-header,
+  .glass-sheet,
+  .glass-modal,
+  .glass-chip {
+    background-color: rgba(14, 28, 22, 0.94);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Liquid glass, part two — molten gold CTAs, drifting blobs, a
+   living page aurora, and light sweeps over the glass cards.
+   ──────────────────────────────────────────────────────────────── */
+
+/* Molten-gold glass button: gradient gold with a top light, a warm
+   drop glow and a light-sweep that runs across the face on hover. */
+.btn-gold-glass {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(145deg, #e8cf97 0%, #c9a45c 55%, #a9843f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(92, 62, 15, 0.35),
+    0 10px 28px rgba(201, 164, 92, 0.28),
+    0 24px 60px rgba(0, 0, 0, 0.35);
+  transition:
+    transform var(--motion-slow) var(--ease-out),
+    background var(--motion-slow) var(--ease-out),
+    box-shadow var(--motion-slow) var(--ease-out);
+}
+.btn-gold-glass::after {
+  content: "";
+  position: absolute;
+  inset: -25% -60%;
+  background: linear-gradient(
+    115deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 58%
+  );
+  transform: translateX(-75%);
+  transition: transform 0.9s var(--ease-out);
+  pointer-events: none;
+}
+.btn-gold-glass:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(92, 62, 15, 0.35),
+    0 12px 34px rgba(201, 164, 92, 0.4),
+    0 28px 70px rgba(0, 0, 0, 0.4);
+}
+.btn-gold-glass:hover::after {
+  transform: translateX(75%);
+}
+
+/* Drifting liquid blobs — slow translate/scale wander. */
+@keyframes blob-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(3rem, -2.5rem, 0) scale(1.18);
+  }
+  66% {
+    transform: translate3d(-2.5rem, 2rem, 0) scale(0.9);
+  }
+}
+.blob {
+  animation: blob-drift 18s var(--ease-out) infinite alternate;
+}
+.blob-slow {
+  animation-duration: 26s;
+}
+.blob-slower {
+  animation-duration: 36s;
+}
+
+/* Living page aurora — fixed wash of gold + moss light behind the
+   translucent sections, so the glass always has colour to catch. */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42rem 30rem at 88% 10%, rgba(201, 164, 92, 0.14), transparent 60%),
+    radial-gradient(38rem 30rem at 8% 35%, rgba(46, 94, 68, 0.22), transparent 60%),
+    radial-gradient(44rem 34rem at 55% 88%, rgba(201, 164, 92, 0.1), transparent 60%),
+    radial-gradient(30rem 24rem at 32% 68%, rgba(28, 72, 54, 0.18), transparent 60%);
+  animation: aurora-drift 44s ease-in-out infinite alternate;
+}
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2.5rem, 1.75rem, 0) scale(1.07);
+  }
+  100% {
+    transform: translate3d(2rem, -1.25rem, 0) scale(1.02);
+  }
+}
+
+/* Light sweeping across a glass card on hover. */
+.card-shine::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(243, 234, 214, 0.14) 50%,
+    transparent 65%
+  );
+  transform: translateX(-130%);
+  transition: transform 1.1s var(--ease-out);
+  pointer-events: none;
+}
+.card-shine:hover::before {
+  transform: translateX(130%);
+}
+
+/* Chat "thinking" dots. */
+@keyframes typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-gold);
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Chat dock — pops up into its corner on mount. */
+@keyframes chat-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.chat-pop {
+  animation: chat-pop 0.45s var(--ease-out) both;
+}
+
+/* Reveal-on-scroll — fades up smoothly as it enters the viewport. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity var(--motion-slow) var(--ease-out),
+    transform var(--motion-slow) var(--ease-out);
+}
+.reveal.reveal-shown {
+  opacity: 1;
+  transform: none;
+}
+
+/* Opening splash — logo + name over the ink backdrop while the site opens.
+   SSR-rendered, so it covers the page from first paint; the component fades
+   it out and removes it once the page is ready. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100; /* above everything — the chat dock sits at z-60 */
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(
+      58% 44% at 50% 38%,
+      color-mix(in oklab, var(--color-moss) 70%, transparent),
+      transparent 75%
+    ),
+    var(--color-ink);
+  opacity: 1;
+  transition: opacity 0.5s var(--ease-out);
+}
+.splash-fade {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: splash-rise 0.7s var(--ease-out) both;
+}
+.splash-logo {
+  width: 6.5rem;
+  height: 6.5rem;
+  object-fit: cover;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-gold) 55%, transparent),
+    0 0 56px color-mix(in oklab, var(--color-gold) 28%, transparent);
+  animation: splash-breathe 2.2s var(--ease-out) infinite alternate;
+}
+.splash-name {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+.splash-sub {
+  margin-top: 0.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--color-cream-muted);
+}
+.splash-bar {
+  margin-top: 1.75rem;
+  width: 9rem;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-gold) 16%, transparent);
+}
+.splash-bar::after {
+  content: "";
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-gold);
+  animation: splash-sweep 1.1s var(--ease-out) infinite;
+}
+@keyframes splash-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes splash-breathe {
+  from {
+    transform: scale(0.96);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes splash-sweep {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(240%);
+  }
+}
