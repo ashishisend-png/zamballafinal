@@ -7,8 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Two things live in one tree:
 
 1. **The app** — "Zambhala Thai Massage", a single-page marketing/booking site for a Thai
-   massage spa (TanStack Start + React 19 + Tailwind v4). All of it renders from
-   [src/routes/index.tsx](src/routes/index.tsx).
+   massage spa (TanStack Start + React 19 + Tailwind v4).
+   [src/routes/__root.tsx](src/routes/__root.tsx) owns the document shell (providers, aurora,
+   splash, Google Fonts);
+   [src/routes/index.tsx](src/routes/index.tsx) is a ~40-line composition of the section
+   components in [src/components/](src/components/).
 2. **The Grok App Builder template** — the sandbox platform harness it was scaffolded from:
    `scripts/`, `server/`, `public/__grok/`, `src/lib/{auth,db,app-data,og,multiplayer,preview-host-bridge}`,
    and the build/QA gates. This is platform infrastructure, not app code.
@@ -26,7 +29,7 @@ npm run build            # vite build + npm run db:migrate
 npm run typecheck        # tsc --noEmit (includes src/ and server/)
 npm run lint             # eslint .
 npm run format           # prettier --write .
-npm test                 # node --test over scripts/**/*.test.mjs + 4 src/lib TS tests
+npm test                 # node --test over scripts/**/*.test.mjs + 6 src/lib TS tests
 npm run preview:restart  # serve the BUILT output on 127.0.0.1:8081 (frees the port first)
 npm run check:auth       # dev server vs. next build agree on VITE_AUTH_ENABLED
 ```
@@ -35,8 +38,11 @@ Single test file:
 
 ```sh
 node --test scripts/preview.test.mjs
-node --experimental-strip-types --test src/lib/auth/sign-in-gate.test.ts
+node --experimental-strip-types --test src/lib/chat/engine.test.ts
 ```
+
+The `src/lib` suites are listed explicitly in the `test` script — a new `*.test.ts` there does
+**not** run until it is added to that list.
 
 Render QA (Playwright + Chromium are preinstalled):
 
@@ -48,6 +54,21 @@ node scripts/browser-smoke.mjs http://127.0.0.1:8081/ /workspace/screenshots/bui
 
 Exit codes: `0` clean, `1` HTTP failure, `2` console/page errors. A 200 from curl does not prove
 the page rendered — read both screenshots, not just the JSON.
+
+Three bespoke suites cover the behaviours a screenshot can't prove. They drive the **dev** server
+at `127.0.0.1:8080`, write to `./screenshots/` (gitignored), and — unlike `browser-smoke.mjs` —
+do not go through `browser-guard.mjs`, so they work outside the sandbox as-is:
+
+```sh
+node scripts/verify-splash.mjs        # splash in SSR HTML, lifts, stops eating pointer events
+node scripts/verify-chat-dock.mjs     # launcher stays position:fixed bottom-right across scroll
+node scripts/verify-scroll-reveal.mjs # every .reveal gains .reveal-shown; cards stay 3-up
+```
+
+All three (and `browser-smoke.mjs`) ignore one known **dev-only** hydration warning: Chromium's
+autofill stamps `style`/`caret-color: transparent` on the booking form's contact fields mid-
+hydration. Keep that allowlist narrow — it is matched on `"didn't match the client"` plus
+`caret-color`/`style={{}}`, so real mismatches still fail.
 
 ### Never start Vite directly
 
@@ -91,10 +112,26 @@ is eslint-ignored). [src/router.tsx](src/router.tsx) must keep exporting a **nam
   meta description, which live outside React's tree.
 - Careful with `t`: array callbacks in these components use `x`/`option`/`booked` as the
   parameter name precisely because `(t) => t.id` would shadow the dictionary.
+- The **AI chat** ([src/components/ai-chat.tsx](src/components/ai-chat.tsx)) is not an LLM call.
+  [src/lib/chat/engine.ts](src/lib/chat/engine.ts) exports a pure `answer(question, lang)` that
+  keyword-matches against `spa.ts` + the dictionary, so replies can't drift from the page and
+  need no key, network or server function; unmatched questions return `null` and the UI falls
+  back to dictionary copy. Matching folds diacritics and uses whole-word tests (`pe` must not
+  hit inside "people"), and order matters — walk-in keywords are checked before the generic
+  booking ones. Adding a topic means adding it in **both** languages plus a case in
+  [engine.test.ts](src/lib/chat/engine.test.ts).
+- Canonical times stay 24h in `spa.ts` (`hours`, `timeSlots`) so comparisons and stored bookings
+  are unaffected; [src/lib/time.ts](src/lib/time.ts)'s `to12h()` is applied **only at display**,
+  and handles ranges like `"10:00 – 21:00"`. The chat engine formats through it too.
+- Entrance motion has two independent mechanisms: `<Splash />`
+  ([splash.tsx](src/components/splash.tsx)) renders in the SSR HTML so it covers the first paint,
+  and lifts on a plain `setTimeout` — deliberately **not** `window load`, which hangs on slow
+  assets; and `<Reveal>` ([reveal.tsx](src/components/reveal.tsx)) is an IntersectionObserver
+  wrapper toggling `.reveal` → `.reveal-shown`, with `delay` staggering siblings.
 - **Bookings persist to `localStorage` only** (`zambhala-bookings`; the language choice uses
-  `zambhala-lang`). There is no database, no
-  auth, no server function in this app — matching `.grok/app-env.json`
-  (`VITE_AUTH_ENABLED: "false"`, `deploy.database: false`).
+  `zambhala-lang`). There is no database and no auth — matching `.grok/app-env.json`
+  (`VITE_AUTH_ENABLED: "false"`, `deploy.database: false`). The single server function is the
+  booking notification below; it emails, it does not store.
 - Section components in [src/components/](src/components/) each own one band of the page and
   read structure from `@/lib/spa` and copy from `useI18n()`. State that crosses sections is
   lifted into `Home`: clicking
@@ -103,13 +140,66 @@ is eslint-ignored). [src/router.tsx](src/router.tsx) must keep exporting a **nam
 - [src/components/ui/](src/components/ui/) is a trimmed shadcn-style Radix layer (button, dialog,
   input, label, sheet, textarea) using `cn()` from [src/lib/utils.ts](src/lib/utils.ts).
 
+### Booking notification email
+
+Submitting the form emails the spa. The one server function in the app is
+[notifyBooking](src/lib/booking/notify.ts) (`createServerFn({ method: "POST" })`, **no**
+`authMiddleware` — auth is off here); the plumbing under [src/lib/mail/](src/lib/mail/) is:
+
+| Module               | Role                                                           |
+| -------------------- | -------------------------------------------------------------- |
+| `booking-request.ts` | Validates the untrusted payload into a `BookingRequest`. Pure. |
+| `booking-email.ts`   | Renders subject/html/text. Pure.                               |
+| `rate-limit.ts`      | In-memory sliding window + `clientIp()`. Pure.                 |
+| `resend.server.ts`   | The one `fetch` to `api.resend.com`. Server-only.              |
+
+Everything except the transport is pure and covered by
+[mail.test.ts](src/lib/mail/mail.test.ts), which runs under `node --experimental-strip-types` —
+so those modules import siblings **relatively and with the `.ts` extension**, never via `@/`
+(a value import through the alias would not resolve outside Vite; type-only alias imports are
+fine because stripping erases them).
+
+Rules this feature is built on, worth keeping:
+
+- **The client never states a price, a duration, or a recipient.** `parseBookingRequest`
+  re-checks ids, durations and slots against `spa.ts` and the email re-derives the price from it,
+  so the form cannot book a treatment that does not exist or a €0 session.
+- **Free text is control-character-stripped** before it reaches a header — a name carrying
+  `\r\n` must never be able to forge `Bcc:` in the subject or `Reply-To`.
+- The endpoint is anonymous, so it rate-limits per IP (5 / 10 min). On Vercel that is per warm
+  instance — a speed bump, not a guarantee; real enforcement needs shared state (Vercel KV).
+- `notifyBooking` returns a coarse `{ ok, reason }`. Detail goes to `console` (visible in Vercel
+  logs), never to the browser.
+- **A mail failure never loses the booking**: [booking.tsx](src/components/booking.tsx) saves to
+  `localStorage` either way and only switches the confirmation dialog to `t.booking.notDelivered`,
+  which tells the guest to phone instead.
+- The email body is **staff-facing internal mail, so it is English in `booking-email.ts` rather
+  than in the dictionary** — the one deliberate exception to "all user-facing text lives in i18n".
+  The guest's language rides along in the body so staff call back in it.
+- `@tanstack/react-start/server` and `resend.server.ts` are **dynamically imported inside the
+  handler**, because `booking.tsx` imports this module and a static import would pull server code
+  into the client bundle.
+
+Env vars (server-only, no `VITE_` prefix; set in Vercel, never in a `.env`):
+
+| Var                  | Required | Purpose                                                                                                             |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `RESEND_API_KEY`     | yes      | Resend secret. Absent → the endpoint reports `unconfigured` and the guest is told to phone; the form still renders. |
+| `BOOKING_FROM_EMAIL` | yes      | Sender, on a domain verified in Resend, e.g. `Zambhala <bookings@zambhalathai.com>`.                                |
+| `BOOKING_NOTIFY_TO`  | no       | Comma-separated inboxes. Defaults to `contact.email` in `spa.ts`.                                                   |
+
+Swapping provider (SendGrid, Postmark, SMTP via `nodemailer`) means rewriting `send()` in
+`resend.server.ts` and nothing else — callers only see `MailOutcome`.
+
 ### Styling
 
 Tailwind v4, configured entirely in [src/styles.css](src/styles.css) via `@theme` — there is no
 `tailwind.config`. Design tokens (`--color-ink/forest/moss/cream/gold`, `--font-display`
 Cormorant Garamond / `--font-sans` Outfit, radii, easings) become utilities like `bg-ink`,
 `text-gold`, `font-display`. Entrance animation is the `.stagger-in` class with inline
-`animationDelay`; both it and `.marquee-track` are disabled under `prefers-reduced-motion`.
+`animationDelay`; it, `.marquee-track`, `.reveal` and `.splash` are all neutralised under
+`prefers-reduced-motion` (the reduced-motion block is the one place every animation must be
+accounted for when adding another).
 
 ### Data/auth layer (pre-wired, currently unused)
 

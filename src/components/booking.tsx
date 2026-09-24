@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
 import { Reveal } from "@/components/reveal";
 import { to12h } from "@/lib/time";
+import { notifyBooking } from "@/lib/booking/notify";
 import {
+  contact,
   loadBookings,
   saveBookings,
   timeSlots,
@@ -24,7 +26,7 @@ type Props = {
 };
 
 export function Booking({ preset, onPresetConsumed }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [treatmentId, setTreatmentId] = useState(treatments[0].id);
   const [duration, setDuration] = useState(treatments[0].durations[1] ?? 60);
   const [date, setDate] = useState("");
@@ -36,6 +38,9 @@ export function Booking({ preset, onPresetConsumed }: Props) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [confirm, setConfirm] = useState<Booking | null>(null);
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  /** Did the spa's inbox actually hear about the last booking? */
+  const [delivered, setDelivered] = useState(true);
 
   useEffect(() => {
     setBookings(loadBookings());
@@ -68,7 +73,7 @@ export function Booking({ preset, onPresetConsumed }: Props) {
     }
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!name.trim() || !phone.trim() || !date) {
@@ -87,9 +92,35 @@ export function Booking({ preset, onPresetConsumed }: Props) {
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
     };
+    // Email the spa first, but never let a mail failure lose the booking: it is
+    // saved on the device either way, and `delivered` only decides whether the
+    // confirmation also tells the guest to phone in.
+    setSending(true);
+    let reached = false;
+    try {
+      const result = await notifyBooking({
+        data: {
+          treatmentId: booking.treatmentId,
+          duration: booking.duration,
+          date: booking.date,
+          time: booking.time,
+          name: booking.name,
+          phone: booking.phone,
+          email: booking.email,
+          notes: booking.notes,
+          lang,
+        },
+      });
+      reached = result.ok;
+    } catch {
+      reached = false;
+    }
+    setSending(false);
+
     const next = [booking, ...bookings].slice(0, 12);
     setBookings(next);
     saveBookings(next);
+    setDelivered(reached);
     setConfirm(booking);
     setNotes("");
   }
@@ -213,8 +244,8 @@ export function Booking({ preset, onPresetConsumed }: Props) {
             {error ? <p className="sm:col-span-2 text-sm text-gold-bright">{error}</p> : null}
             <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-4 pt-2">
               <p className="font-display text-3xl text-gold">{t.price(price)}</p>
-              <Button type="submit" size="lg">
-                {t.booking.submit}
+              <Button type="submit" size="lg" disabled={sending}>
+                {sending ? t.booking.sending : t.booking.submit}
               </Button>
             </div>
           </form>
@@ -264,6 +295,9 @@ export function Booking({ preset, onPresetConsumed }: Props) {
                 )
               : null}
           </DialogDescription>
+          {delivered ? null : (
+            <p className="mt-3 text-sm text-gold-bright">{t.booking.notDelivered(contact.phone)}</p>
+          )}
           <Button className="mt-6 w-full" onClick={() => setConfirm(null)}>
             {t.booking.close}
           </Button>

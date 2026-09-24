@@ -177,6 +177,9 @@ const en = {
       `${minutes} minutes — ${euroLeading(price)}`,
     missingFields: "Please add your name, phone, and a date.",
     submit: "Confirm booking",
+    sending: "Sending…",
+    notDelivered: (phone: string) =>
+      `We could not reach the spa's inbox just now. Your reservation is saved on this device — please call ${phone} to confirm it.`,
     heldTitle: "Held for you",
     heldBody: "Reservations stay on this device so you can review them anytime.",
     heldEmpty: "No reservations yet. Choose a ritual to begin.",
@@ -349,6 +352,9 @@ const pt: Dictionary = {
       `${minutes} minutos — ${euroTrailing(price)}`,
     missingFields: "Indique o seu nome, telefone e uma data.",
     submit: "Confirmar reserva",
+    sending: "A enviar…",
+    notDelivered: (phone: string) =>
+      `Não foi possível contactar a caixa de entrada do spa neste momento. A sua reserva ficou guardada neste dispositivo — ligue para ${phone} para a confirmar.`,
     heldTitle: "Reservado para si",
     heldBody:
       "As reservas ficam guardadas neste dispositivo para poder consultá-las quando quiser.",
