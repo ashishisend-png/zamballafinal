@@ -26,6 +26,30 @@ export function Hero() {
     return () => motion.removeEventListener("change", apply);
   }, []);
 
+  // Pause the hero video the moment it scrolls out of view — a fullscreen
+  // autoplaying video is one of the biggest phone battery/GPU drains there
+  // is, and it's invisible by the time the visitor reaches the menu.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+              void el.play().catch(() => {});
+            }
+          } else {
+            el.pause();
+          }
+        }
+      },
+      { threshold: 0.05 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <section id="top" className="relative isolate min-h-dvh overflow-hidden">
       <video
@@ -49,7 +73,7 @@ export function Hero() {
       <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col justify-end px-4 pb-16 pt-28 sm:px-6 sm:pb-24">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-24 bottom-0 -z-10 rounded-r-[2.5rem] bg-linear-to-r from-ink/75 via-ink/35 to-transparent backdrop-blur-md"
+          className="pointer-events-none absolute inset-x-0 top-24 bottom-0 -z-10 rounded-r-[2.5rem] bg-linear-to-r from-ink/75 via-ink/35 to-transparent backdrop-blur-md hero-fade"
         />
         <p className="stagger-in text-xs tracking-[0.32em] text-gold uppercase">{t.hero.eyebrow}</p>
         <h1

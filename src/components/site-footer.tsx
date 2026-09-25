@@ -18,6 +18,8 @@ export function SiteFooter() {
           <img
             src="/logo-mark.png"
             alt=""
+            loading="lazy"
+            decoding="async"
             className="glass-chip size-24 rounded-full object-cover ring-1 ring-gold/45"
           />
           <p className="mt-4 font-display text-2xl text-gold">Zambhala</p>

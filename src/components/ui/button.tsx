@@ -10,7 +10,7 @@ const buttonVariants = cva(
       variant: {
         gold: "btn-gold-glass text-ink",
         outline:
-          "border border-gold/45 text-gold hover:bg-gold/10 backdrop-blur-md bg-cream/5",
+          "outline-frost border border-gold/45 text-gold hover:bg-gold/10 backdrop-blur-md bg-cream/5",
         ghost: "text-cream hover:text-gold",
       },
       size: {

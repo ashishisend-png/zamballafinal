@@ -6,7 +6,9 @@ export function Marquee() {
   const items = Array.from({ length: 6 }, (_, i) => i);
 
   return (
-    <div className="border-y border-cream/10 bg-ink/45 py-3 backdrop-blur-md">
+    <div className="marquee-bar border-y border-cream/10 bg-ink/45 py-3 overflow-hidden backdrop-blur-md">
+      {/* overflow-hidden: the w-max track is several viewports wide and
+          must never leak into the document's scrollable area. */}
       <div className="marquee-track flex w-max items-center whitespace-nowrap">
         {[0, 1].map((half) =>
           items.map((i) => (

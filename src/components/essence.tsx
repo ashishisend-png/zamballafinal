@@ -17,6 +17,8 @@ export function Essence() {
           <img
             src="/massage.jpg"
             alt={t.essence.imageAlt}
+            loading="lazy"
+            decoding="async"
             className="aspect-4/5 w-full object-cover sm:aspect-4/3"
           />
           <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-gold/25" />

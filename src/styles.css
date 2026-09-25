@@ -30,6 +30,8 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* No grey flash on taps, and no iOS double-tap zoom hiccups. */
+    -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
     /* Sticky header is ~4rem tall — keep anchor targets clear of it. */
     scroll-padding-top: 5.5rem;
@@ -110,16 +112,16 @@
   }
 }
 
+/* Compositor-only entrance (opacity + transform): animating `filter`
+   repaints the element every frame, which stutters on phone GPUs. */
 @keyframes fade-up {
   from {
     opacity: 0;
     transform: translateY(12px);
-    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
@@ -511,5 +513,79 @@
   }
   to {
     transform: translateX(240%);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Mobile fixes & performance (small screens)
+   The biggest phone GPU costs are 1) the full-viewport aurora drift,
+   2) dozens of backdrop-filter surfaces that re-blur the page behind
+   them on every scroll frame, and 3) huge animated decorative blurs.
+   These rules keep the exact glass look but cut the cost. They are
+   unlayered, so they beat the Tailwind utilities (same trick as .glass).
+   ──────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Freeze the full-screen aurora — a static wash of light costs nothing. */
+  .aurora {
+    animation: none;
+  }
+
+  /* Smaller blur radii: surfaces still read as frosted glass, but each
+     scroll frame re-blurs far fewer pixels. */
+  .glass {
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+  }
+  .glass-field {
+    backdrop-filter: blur(8px) saturate(130%);
+    -webkit-backdrop-filter: blur(8px) saturate(130%);
+  }
+  .glass-overlay {
+    backdrop-filter: blur(4px) saturate(110%);
+    -webkit-backdrop-filter: blur(4px) saturate(110%);
+  }
+  .glass-chip {
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+  }
+  .glass-sheet,
+  .glass-modal {
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+  }
+
+  /* The fixed header re-blurs the whole page behind it on every scroll
+     frame. A near-opaque gradient reads identically and costs nothing. */
+  .glass-header {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: linear-gradient(
+      180deg,
+      rgba(7, 17, 12, 0.94),
+      rgba(14, 28, 22, 0.9)
+    );
+  }
+
+  /* No backdrop blur over the hero video or the moving marquee strip,
+     or on the small outline buttons riding in the fixed header. */
+  .hero-fade,
+  .marquee-bar,
+  .outline-frost {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* Cap the huge decorative blobs — the glow still reads at ~40% of
+     the blur budget, but each one rasterises a much smaller layer. */
+  .blob {
+    filter: blur(48px);
+  }
+
+  /* iOS Safari zooms into ANY form control under 16px when it gains
+     focus. 16px on small screens keeps the viewport steady. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 }

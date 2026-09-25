@@ -75,6 +75,8 @@ export function Treatments({
                   <img
                     src={images[treatment.id]}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   />
                   <div
