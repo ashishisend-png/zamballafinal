@@ -142,6 +142,54 @@ function authPopupPlugin(): Plugin {
   };
 }
 
+/**
+ * Dev-server half of `/sitemap.xml` — see `server/routes/sitemap.xml.ts` for
+ * the deployed (Nitro) half. Served as a raw middleware response, not a React
+ * route, because the sitemap is a non-HTML document and the router would wrap
+ * it in the app shell. Both halves import `src/lib/sitemap.ts`, so dev bytes
+ * always match prod bytes.
+ */
+function sitemapPlugin(): Plugin {
+  return {
+    name: "app-builder:sitemap",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        try {
+          const rawUrl = req.url ?? "";
+          const pathOnly = rawUrl.split("?", 1)[0] ?? "";
+          if (pathOnly !== "/sitemap.xml") {
+            next();
+            return;
+          }
+          if ((req.method ?? "GET").toUpperCase() !== "GET") {
+            res.statusCode = 405;
+            res.setHeader("content-type", "text/plain; charset=utf-8");
+            res.end("Method Not Allowed");
+            return;
+          }
+          const mod = (await server.ssrLoadModule("/src/lib/sitemap.ts")) as {
+            SITEMAP_XML?: string;
+          };
+          const body = mod.SITEMAP_XML ?? "";
+          res.statusCode = 200;
+          res.setHeader("content-type", "application/xml; charset=utf-8");
+          res.setHeader("cache-control", "public, max-age=3600");
+          res.setHeader("content-length", String(Buffer.byteLength(body, "utf8")));
+          res.end(body);
+        } catch (err) {
+          console.error("[app-builder] /sitemap.xml handler failed:", err);
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader("content-type", "text/plain; charset=utf-8");
+            res.end("sitemap failed");
+          }
+        }
+      });
+    },
+  };
+}
+
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
@@ -161,6 +209,8 @@ export default defineConfig(({ command, isPreview }) => ({
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.
     authPopupPlugin(),
+    // Before the PWA plugin + tanstackStart so /sitemap.xml stays raw XML.
+    sitemapPlugin(),
     // Dev-only /__app-env, read by scripts/check-auth-invariant.mjs.
     appEnvPlugin(),
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
